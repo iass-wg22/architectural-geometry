@@ -183,6 +183,7 @@ This section contains a list of pages dedicated specific surfaces.
 :::
 
 :::{dropdown} M-P
+:open:
 {button}`Moulding surfaces <surfaces/moulding_surfaces/home.md>`
 
 :::
