@@ -21,7 +21,8 @@ extends:
 
 site:
   template: book-theme
-  # style: css/style.css
+  parts:
+    footer: prototype/suggest-edit/footer.md
   options:
     favicon: images/favicon-iass.ico
     logo: images/logo-iass.png

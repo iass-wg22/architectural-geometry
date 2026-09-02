@@ -1,0 +1,2 @@
+````{anywidget} ./suggest-edit.mjs
+````

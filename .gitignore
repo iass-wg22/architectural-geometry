@@ -8,3 +8,6 @@ node_modules/
 
 # VSCode settings
 .vscode
+
+# Local content suggestion storage
+.local-data/

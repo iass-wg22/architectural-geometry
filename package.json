@@ -6,9 +6,21 @@
     "build": "npm run check:bibliography && jupyter-book build --html",
     "new:surface": "node scripts/new-surface.mjs",
     "sync:bibliography": "node scripts/sync-bibliography.mjs",
-    "check:bibliography": "node scripts/sync-bibliography.mjs --check"
+    "check:bibliography": "node scripts/sync-bibliography.mjs --check",
+    "test:suggestions": "node scripts/check-suggestion-schema.mjs",
+    "start:storage": "node scripts/suggestion-storage-server.mjs",
+    "dev": "concurrently --kill-others-on-fail --names site,storage --prefix-colors cyan,magenta npm:start npm:start:storage",
+    "preview:issue": "node scripts/format-suggestion-issue.mjs",
+    "test:issue-formatter": "node scripts/check-issue-formatter.mjs",
+    "start:storage:github": "node scripts/suggestion-storage-server.mjs --github-issues",
+    "dev:github": "concurrently --kill-others-on-fail --names site,storage --prefix-colors cyan,magenta npm:start npm:start:storage:github",
+    "retry:suggestions": "node scripts/retry-failed-suggestion.mjs",
+    "test:retry-policy": "node scripts/check-suggestion-retry-policy.mjs",
+    "test:retry-service": "node scripts/check-suggestion-retry-service.mjs"
   },
   "devDependencies": {
+    "ajv": "^8.20.0",
+    "concurrently": "10.0.5",
     "jupyter-book": "2.1.6"
   },
   "engines": {

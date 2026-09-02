@@ -1,0 +1,250 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Architectural Geometry content suggestion",
+  "description": "Version 1 of the data contract used for editorial suggestions.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "type",
+    "status",
+    "createdAt",
+    "operation",
+    "placement",
+    "title",
+    "target",
+    "body"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "type": {
+      "const": "content-suggestion"
+    },
+    "status": {
+      "const": "draft"
+    },
+    "createdAt": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$"
+    },
+    "operation": {
+      "enum": [
+        "add",
+        "delete"
+      ]
+    },
+    "placement": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "before",
+        "after",
+        null
+      ]
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "contributor": {
+      "type": "object",
+      "description": "Optional public identity supplied by the contributor.",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "affiliation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        }
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "section",
+        "selector"
+      ],
+      "properties": {
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "pageTitle",
+            "pageUrl",
+            "sourcePath",
+            "pageRevision"
+          ],
+          "properties": {
+            "pageTitle": {
+              "type": "string",
+              "minLength": 1
+            },
+            "pageUrl": {
+              "type": "string",
+              "pattern": "^https?://"
+            },
+            "sourcePath": {
+              "type": "string",
+              "pattern": "^(?!.*\\\\).+\\.md$"
+            },
+            "pageRevision": {
+              "type": "string",
+              "description": "SHA-256 fingerprint of the MyST source page when the suggestion was prepared.",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        },
+        "section": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "title",
+            "id",
+            "level"
+          ],
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1
+            },
+            "level": {
+              "enum": [
+                "h1",
+                "h2",
+                "h3",
+                "h4",
+                "h5",
+                "h6",
+                null
+              ]
+            }
+          }
+        },
+        "selector": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "exact",
+            "prefix",
+            "suffix"
+          ],
+          "properties": {
+            "type": {
+              "const": "TextQuoteSelector"
+            },
+            "exact": {
+              "type": "string",
+              "minLength": 1
+            },
+            "prefix": {
+              "type": "string",
+              "maxLength": 160
+            },
+            "suffix": {
+              "type": "string",
+              "maxLength": 160
+            }
+          }
+        }
+      }
+    },
+    "body": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "suggestedText",
+        "rationale",
+        "sources"
+      ],
+      "properties": {
+        "suggestedText": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sources": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "add"
+          }
+        },
+        "required": [
+          "operation"
+        ]
+      },
+      "then": {
+        "properties": {
+          "placement": {
+            "enum": [
+              "before",
+              "after"
+            ]
+          },
+          "body": {
+            "type": "object",
+            "properties": {
+              "suggestedText": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "placement": {
+            "type": "null"
+          },
+          "body": {
+            "type": "object",
+            "properties": {
+              "suggestedText": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
