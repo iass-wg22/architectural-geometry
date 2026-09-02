@@ -4,6 +4,8 @@ on:
   pull_request:
     branches:
       - main
+      - develop
+      - feature/ev_collab 
   workflow_dispatch:
 
 env:
