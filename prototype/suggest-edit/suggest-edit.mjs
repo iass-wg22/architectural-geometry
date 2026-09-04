@@ -1,4 +1,47 @@
-function initializeSuggestEdit() {
+function resolveSuggestionConfiguration() {
+  const runtimeConfiguration =
+    globalThis.architecturalGeometrySuggestions ?? {};
+
+  const isLocalSite =
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1";
+
+  const suggestionsEnabled =
+    typeof runtimeConfiguration.suggestionsEnabled === "boolean"
+      ? runtimeConfiguration.suggestionsEnabled
+      : isLocalSite;
+
+  const configuredApiUrl =
+    typeof runtimeConfiguration.apiUrl === "string"
+      ? runtimeConfiguration.apiUrl.trim()
+      : "";
+
+  const apiUrl =
+    configuredApiUrl ||
+    (isLocalSite
+      ? "http://127.0.0.1:8788/api/suggestions"
+      : null);
+
+  return Object.freeze({
+    suggestionsEnabled,
+    apiUrl,
+  });
+}
+
+function isValidSuggestionApiUrl(value) {
+  if (typeof value !== "string" || value === "") {
+    return false;
+  }
+
+  try {
+    const url = new URL(value);
+
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+function initializeSuggestEdit(configuration) {
   "use strict";
 
   /* ======================================================================== */
@@ -32,11 +75,9 @@ function initializeSuggestEdit() {
   // Number of contextual characters retained on each side of the selection.
   const contextCharacterLimit = 160;
 
-  // Development API used while the public storage service is not deployed.
-  // Keeping this value in one place will make the production endpoint easy to
-  // substitute later without changing the form logic.
-  const suggestionSubmissionUrl =
-    "http://127.0.0.1:8787/api/suggestions";
+  // The endpoint is supplied by the runtime configuration. The form logic
+  // therefore remains independent from local, staging and production URLs.
+  const suggestionSubmissionUrl = configuration.apiUrl;
 
   /* ======================================================================== */
   /* PROTOTYPE STATE                                                          */
@@ -857,7 +898,7 @@ function initializeSuggestEdit() {
       return null;
     }
 
-    const currentRoute = normalizeRoutePath(window.location.pathname);
+    const currentRoute = getCurrentProjectRoute();
 
     for (const routeData of Object.values(loaderData)) {
       const page = routeData?.page;
@@ -913,12 +954,110 @@ function initializeSuggestEdit() {
     }
   }
 
-  function routeMatchesCurrentPage(routeCandidates, currentRoute) {
-    return routeCandidates.has(currentRoute);
+  function normalizeRouteForComparison(route) {
+    return normalizeRoutePath(route)
+      .replaceAll("_", "-");
+  }
+
+  function routeMatchesCurrentPage(
+    routeCandidates,
+    currentRoute,
+  ) {
+    const normalizedCurrentRoute =
+      normalizeRouteForComparison(currentRoute);
+
+    return [...routeCandidates].some(
+      (routeCandidate) =>
+        normalizeRouteForComparison(routeCandidate) ===
+        normalizedCurrentRoute,
+    );
+  }
+
+  function getCurrentProjectRoute() {
+    const modulePathname =
+      new URL(import.meta.url).pathname;
+
+    const buildDirectoryMarker = "/build/";
+    const buildDirectoryIndex =
+      modulePathname.lastIndexOf(buildDirectoryMarker);
+
+    const siteBasePath =
+      buildDirectoryIndex >= 0
+        ? modulePathname.slice(0, buildDirectoryIndex)
+        : "";
+
+    let pagePathname = window.location.pathname;
+
+    if (
+      siteBasePath &&
+      (
+        pagePathname === siteBasePath ||
+        pagePathname.startsWith(`${siteBasePath}/`)
+      )
+    ) {
+      pagePathname =
+        pagePathname.slice(siteBasePath.length) || "/";
+    }
+
+    return normalizeRoutePath(pagePathname);
+  }
+
+  function getSourcePathFromEditLink() {
+    const editLink = document.querySelector(
+      'a.myst-fm-edit-link[href*="/edit/"]',
+    );
+
+    if (!editLink) {
+      return null;
+    }
+
+    try {
+      const editUrl = new URL(editLink.href);
+      const editMarker = "/edit/";
+      const editMarkerIndex =
+        editUrl.pathname.indexOf(editMarker);
+
+      if (editMarkerIndex < 0) {
+        return null;
+      }
+
+      // What follows /edit/ begins with the Git revision,
+      // usually "main", followed by the actual source path.
+      const revisionAndSourcePath =
+        editUrl.pathname.slice(
+          editMarkerIndex + editMarker.length,
+        );
+
+      const firstSlashIndex =
+        revisionAndSourcePath.indexOf("/");
+
+      if (firstSlashIndex < 0) {
+        return null;
+      }
+
+      const sourcePath = decodeURIComponent(
+        revisionAndSourcePath.slice(
+          firstSlashIndex + 1,
+        ),
+      );
+
+      if (!sourcePath.toLowerCase().endsWith(".md")) {
+        return null;
+      }
+
+      return normalizeSourceFilePath(sourcePath);
+    } catch {
+      return null;
+    }
   }
 
   function resolveSourcePath() {
-    const currentRoute = normalizeRoutePath(window.location.pathname);
+    const sourcePathFromEditLink = getSourcePathFromEditLink();
+
+    if (sourcePathFromEditLink) {
+      return sourcePathFromEditLink;
+    }
+    const currentRoute = getCurrentProjectRoute();
     const remixPage = getCurrentRemixPage();
 
     // Remix may retain the data of the page that originally loaded the app
@@ -980,7 +1119,7 @@ function initializeSuggestEdit() {
     return (
       typeof page?.location === "string" &&
       normalizeSourceFilePath(page.location) ===
-        normalizeSourceFilePath(sourcePath)
+      normalizeSourceFilePath(sourcePath)
     );
   }
 
@@ -1007,16 +1146,129 @@ function initializeSuggestEdit() {
    * application.
    */
   async function fetchCurrentRoutePage(sourcePath) {
-    const currentRoute = normalizeRoutePath(window.location.pathname);
+    /*
+     * GitHub Pages serves a completely static website. It does not provide
+     * Remix data endpoints, but every generated HTML page contains its MyST
+     * page information inside the initial __remixContext script.
+     *
+     * Reading that static document gives us the exact SHA-256 fingerprint
+     * even after Remix has removed its bootstrap data from window.
+     */
+    const staticPageUrl = new URL(window.location.href);
+
+    staticPageUrl.hash = "";
+    staticPageUrl.search = "";
+
+    try {
+      const response = await fetch(staticPageUrl, {
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: {
+          Accept: "text/html",
+        },
+      });
+
+      if (response.ok) {
+        const html = await response.text();
+
+        const staticDocument = new DOMParser().parseFromString(
+          html,
+          "text/html",
+        );
+
+        const bootstrapScript = [...staticDocument.scripts].find(
+          (script) =>
+            script.textContent.includes(
+              "window.__remixContext",
+            ),
+        );
+
+        if (bootstrapScript) {
+          const scriptText =
+            bootstrapScript.textContent.trim();
+
+          const assignmentPrefix =
+            /^window\.__remixContext\s*=\s*/;
+
+          if (assignmentPrefix.test(scriptText)) {
+            let serializedContext = scriptText
+              .replace(assignmentPrefix, "")
+              .trim();
+
+            if (serializedContext.endsWith(";")) {
+              serializedContext =
+                serializedContext.slice(0, -1).trim();
+            }
+
+            try {
+              const remixContext =
+                JSON.parse(serializedContext);
+
+              const loaderData =
+                remixContext?.state?.loaderData;
+
+              if (
+                loaderData &&
+                typeof loaderData === "object"
+              ) {
+                for (
+                  const routeData of
+                  Object.values(loaderData)
+                ) {
+                  const pageCandidates = [
+                    routeData?.page,
+                    routeData?.data?.page,
+                  ];
+
+                  for (const page of pageCandidates) {
+                    if (
+                      pageMatchesSourcePath(
+                        page,
+                        sourcePath,
+                      )
+                    ) {
+                      return page;
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              console.warn(
+                "[Suggest an edit] Unable to read the static MyST page metadata.",
+                error,
+              );
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.warn(
+        "[Suggest an edit] Unable to retrieve the static page metadata.",
+        error,
+      );
+    }
+
+    /*
+     * Keep the Remix data request as a fallback for the local development
+     * server and for any future deployment that supports data endpoints.
+     */
+    const currentRoute = getCurrentProjectRoute();
+
     const routeIds =
       currentRoute === "/"
         ? ["routes/_index", "routes/$"]
         : ["routes/$", "routes/_index"];
 
     for (const routeId of routeIds) {
-      const routeDataUrl = new URL(window.location.href);
+      const routeDataUrl = new URL(
+        window.location.href,
+      );
+
       routeDataUrl.hash = "";
-      routeDataUrl.searchParams.set("_data", routeId);
+      routeDataUrl.searchParams.set(
+        "_data",
+        routeId,
+      );
 
       let response;
 
@@ -1036,6 +1288,17 @@ function initializeSuggestEdit() {
         continue;
       }
 
+      const responseContentType =
+        response.headers.get("Content-Type") ?? "";
+
+      if (
+        !responseContentType
+          .toLowerCase()
+          .includes("application/json")
+      ) {
+        continue;
+      }
+
       let routeData;
 
       try {
@@ -1044,10 +1307,20 @@ function initializeSuggestEdit() {
         continue;
       }
 
-      const page = routeData?.page ?? routeData?.data?.page ?? null;
+      const pageCandidates = [
+        routeData?.page,
+        routeData?.data?.page,
+      ];
 
-      if (pageMatchesSourcePath(page, sourcePath)) {
-        return page;
+      for (const page of pageCandidates) {
+        if (
+          pageMatchesSourcePath(
+            page,
+            sourcePath,
+          )
+        ) {
+          return page;
+        }
       }
     }
 
@@ -1659,7 +1932,7 @@ function initializeSuggestEdit() {
       if (!response.ok) {
         throw new Error(
           responseBody.message ||
-            `The storage server rejected the request (${response.status}).`,
+          `The storage server rejected the request (${response.status}).`,
         );
       }
 
@@ -1861,23 +2134,69 @@ function initializeSuggestEdit() {
 /* MYST ANYWIDGET ENTRY POINT                                                 */
 /* ========================================================================== */
 
-function render({ el }) {
-  // Start the global suggestion interface when MyST mounts the site footer.
-  initializeSuggestEdit();
 
-  // Leave only an invisible diagnostic marker inside the widget itself.
+function render({ el }) {
+  const configuration = resolveSuggestionConfiguration();
+
   const marker = document.createElement("span");
   marker.hidden = true;
-  marker.setAttribute("data-suggest-edit-loader", "active");
+
+  if (!configuration.suggestionsEnabled) {
+    window.suggestEditPrototype?.destroy?.();
+
+    marker.setAttribute(
+      "data-suggest-edit-loader",
+      "disabled",
+    );
+    el.appendChild(marker);
+
+    console.info(
+      "[Suggest an edit] Interface disabled by configuration.",
+    );
+
+    return () => { };
+  }
+
+  if (!isValidSuggestionApiUrl(configuration.apiUrl)) {
+    window.suggestEditPrototype?.destroy?.();
+
+    marker.setAttribute(
+      "data-suggest-edit-loader",
+      "configuration-error",
+    );
+    el.appendChild(marker);
+
+    console.error(
+      "[Suggest an edit] Interface enabled without a valid API URL.",
+    );
+
+    return () => { };
+  }
+
+  initializeSuggestEdit(configuration);
+
+  // Retain the exact instance created by this widget rendering.
+  // An obsolete MyST cleanup must never destroy a newer instance.
+  const prototypeInstance =
+    window.suggestEditPrototype;
+
+  marker.setAttribute(
+    "data-suggest-edit-loader",
+    "active",
+  );
   el.appendChild(marker);
 
-  console.info("[Suggest an edit] Automatic MyST widget active.");
+  console.info(
+    `[Suggest an edit] Automatic MyST widget active: ${configuration.apiUrl}`,
+  );
 
-  // MyST calls this cleanup function when the widget is removed, for example
-  // during client-side navigation. A newly mounted widget will initialize a
-  // fresh interface for the next page.
   return () => {
-    window.suggestEditPrototype?.destroy?.();
+    if (
+      window.suggestEditPrototype ===
+      prototypeInstance
+    ) {
+      prototypeInstance?.destroy?.();
+    }
   };
 }
 

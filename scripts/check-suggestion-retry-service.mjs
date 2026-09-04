@@ -62,7 +62,7 @@ function createSuggestionRecord({
     delivery: {
       status: deliveryStatus,
       provider: "github",
-      repository: "evetillard/architectural-geometry",
+      repository: "example-owner/architectural-geometry/architectural-geometry",
       attemptedAt,
       attemptCount,
       error: {
@@ -98,10 +98,10 @@ function createSuccessfulGitHubDelivery({
 } = {}) {
   return {
     provider: "github",
-    repository: "evetillard/architectural-geometry",
+    repository: "example-owner/architectural-geometry/architectural-geometry",
     issueNumber,
     issueUrl:
-      `https://github.com/evetillard/architectural-geometry/issues/${issueNumber}`,
+      `https://github.com/example-owner/architectural-geometry/architectural-geometry/issues/${issueNumber}`,
     reused,
   };
 }

@@ -30,7 +30,7 @@ function createFailedDelivery(
   return {
     status: "failed",
     provider: "github",
-    repository: "evetillard/architectural-geometry",
+    repository: "example-owner/architectural-geometry/architectural-geometry",
     attemptedAt,
     attemptCount,
     error: {
@@ -206,7 +206,7 @@ registerTest("Delivered suggestion is ignored", () => {
     deliveredAt: "2026-08-26T12:00:00.000Z",
     issueNumber: 4,
     issueUrl:
-      "https://github.com/evetillard/architectural-geometry/issues/4",
+      "https://github.com/example-owner/architectural-geometry/architectural-geometry/issues/4",
   });
 
   const decision = evaluateAutomaticRetry(

@@ -1,0 +1,44 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "architectural-geometry-suggestions",
+  "main": "src/index.mjs",
+  "compatibility_date": "2026-08-31",
+
+  // Local development is permissive only for localhost origins.
+  // Set this to "production" before deploying the official Worker.
+  "vars": {
+    "ENVIRONMENT": "local",
+
+    // Set the exact public origin before deployment, without a path.
+    // Example: https://iass-wg22.github.io
+    "ALLOWED_ORIGIN": "",
+
+    // Enable only after configuring and installing the GitHub App.
+    "GITHUB_DELIVERY_ENABLED": "false",
+
+    // Populate these values during official deployment.
+    "GITHUB_APP_ID": "",
+    "GITHUB_APP_INSTALLATION_ID": "",
+    "GITHUB_REPOSITORY_OWNER": "iass-wg22",
+    "GITHUB_REPOSITORY_NAME": "architectural-geometry"
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "architectural-geometry-suggestions-local",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // Add the production retry schedule after deployment.
+  // Example: "*/5 * * * *"
+  "triggers": {
+    "crons": []
+  },
+
+  "observability": {
+    "enabled": true
+  }
+}

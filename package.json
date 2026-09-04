@@ -16,15 +16,22 @@
     "dev:github": "concurrently --kill-others-on-fail --names site,storage --prefix-colors cyan,magenta npm:start npm:start:storage:github",
     "retry:suggestions": "node scripts/retry-failed-suggestion.mjs",
     "test:retry-policy": "node scripts/check-suggestion-retry-policy.mjs",
-    "test:retry-service": "node scripts/check-suggestion-retry-service.mjs"
+    "test:retry-service": "node scripts/check-suggestion-retry-service.mjs",
+    "generate:worker-validator": "node scripts/generate-worker-suggestion-validator.mjs",
+    "test:github-app": "node scripts/check-worker-github-app.mjs"
   },
   "devDependencies": {
     "ajv": "^8.20.0",
     "concurrently": "10.0.5",
-    "jupyter-book": "2.1.6"
+    "jupyter-book": "2.1.6",
+    "wrangler": "^4.127.1"
   },
   "engines": {
     "node": ">=24 <27",
     "npm": ">=11"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "workerd@1.20260828.1": true
   }
 }

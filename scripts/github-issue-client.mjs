@@ -12,19 +12,12 @@ import {
   createSuggestionIssueMarker,
 } from "./format-suggestion-issue.mjs";
 
-/* ========================================================================== */
-/* DEVELOPMENT SAFETY CONFIGURATION                                           */
-/* ========================================================================== */
+import {
+  findExistingGitHubIssueBySuggestionId,
+} from "../lib/content-suggestions/github-issue-duplicates.mjs";
 
-// The local prototype is deliberately restricted to the personal fork.
-// This module refuses every other destination, including the official WG22
-// repository. Production delivery will later use a separate GitHub App.
 export const developmentGitHubRepository =
-  "evetillard/architectural-geometry";
-
-/* ========================================================================== */
-/* INPUT VALIDATION                                                           */
-/* ========================================================================== */
+  String(process.env.GH_REPOSITORY ?? "").trim();
 
 function normalizeRequiredText(value, fieldName) {
   if (typeof value !== "string" || !value.trim()) {
@@ -36,7 +29,9 @@ function normalizeRequiredText(value, fieldName) {
 
 function validateIssue(issue) {
   if (!issue || typeof issue !== "object") {
-    throw new Error("The formatted GitHub Issue is missing or invalid.");
+    throw new Error(
+      "The formatted GitHub Issue is missing or invalid.",
+    );
   }
 
   const title = normalizeRequiredText(issue.title, "title");
@@ -75,13 +70,18 @@ function validateIssue(issue) {
     body,
     labels,
     suggestionId,
-    suggestionMarker,
   };
 }
 
 function validateRepository(repository) {
+  if (!developmentGitHubRepository) {
+    throw new Error(
+      "Refusing to contact GitHub because GH_REPOSITORY is not configured.",
+    );
+  }
+
   const normalizedRepository = normalizeRequiredText(
-    repository,
+    repository || developmentGitHubRepository,
     "repository",
   );
 
@@ -96,10 +96,6 @@ function validateRepository(repository) {
 
   return developmentGitHubRepository;
 }
-
-/* ========================================================================== */
-/* GITHUB CLI EXECUTION                                                       */
-/* ========================================================================== */
 
 function runGitHubCli(argumentsList) {
   return new Promise((resolve, reject) => {
@@ -125,22 +121,15 @@ function runGitHubCli(argumentsList) {
     });
 
     command.on("error", (error) => {
-      if (commandFinished) {
-        return;
-      }
-
+      if (commandFinished) return;
       commandFinished = true;
-
       reject(
         new Error(`Unable to launch GitHub CLI: ${error.message}`),
       );
     });
 
     command.on("close", (exitCode) => {
-      if (commandFinished) {
-        return;
-      }
-
+      if (commandFinished) return;
       commandFinished = true;
 
       if (exitCode !== 0) {
@@ -161,10 +150,6 @@ function runGitHubCli(argumentsList) {
     });
   });
 }
-
-/* ========================================================================== */
-/* ACCESS VERIFICATION                                                        */
-/* ========================================================================== */
 
 export async function verifyDevelopmentGitHubAccess(
   repository = developmentGitHubRepository,
@@ -212,10 +197,6 @@ export async function verifyDevelopmentGitHubAccess(
   };
 }
 
-/* ========================================================================== */
-/* EXISTING ISSUE LOOKUP                                                      */
-/* ========================================================================== */
-
 function parsePaginatedIssueResponse(commandOutput) {
   let pages;
 
@@ -239,38 +220,6 @@ function parsePaginatedIssueResponse(commandOutput) {
   return pages.flat();
 }
 
-function extractExistingIssueInformation(issue, repository) {
-  const issueNumber = issue?.number;
-  const issueUrl = issue?.html_url;
-
-  if (!Number.isInteger(issueNumber) || issueNumber < 1) {
-    throw new Error(
-      "GitHub returned an existing Issue without a valid number.",
-    );
-  }
-
-  const expectedIssueUrl =
-    `https://github.com/${repository}/issues/${issueNumber}`;
-
-  if (
-    typeof issueUrl !== "string" ||
-    issueUrl.replace(/\/$/, "").toLowerCase() !==
-      expectedIssueUrl.toLowerCase()
-  ) {
-    throw new Error(
-      `GitHub returned an unexpected Issue URL for #${issueNumber}.`,
-    );
-  }
-
-  return {
-    provider: "github",
-    repository,
-    issueNumber,
-    issueUrl: expectedIssueUrl,
-    reused: true,
-  };
-}
-
 export async function findDevelopmentGitHubIssueBySuggestionId(
   suggestionId,
   {
@@ -279,17 +228,11 @@ export async function findDevelopmentGitHubIssueBySuggestionId(
   } = {},
 ) {
   const safeRepository = validateRepository(repository);
-  const suggestionMarker = createSuggestionIssueMarker(
-    suggestionId,
-  );
 
   if (verifyAccess) {
     await verifyDevelopmentGitHubAccess(safeRepository);
   }
 
-  // The REST endpoint is intentionally paginated instead of relying on the
-  // GitHub search index. This makes an Issue discoverable immediately after
-  // creation and compares the complete, exact marker stored in its body.
   const issueListResult = await runGitHubCli([
     "api",
     `repos/${safeRepository}/issues?state=all&per_page=100`,
@@ -301,38 +244,14 @@ export async function findDevelopmentGitHubIssueBySuggestionId(
     issueListResult.standardOutput,
   );
 
-  const matchingIssues = repositoryItems.filter(
-    (repositoryItem) =>
-      !repositoryItem?.pull_request &&
-      typeof repositoryItem?.body === "string" &&
-      repositoryItem.body.includes(suggestionMarker),
-  );
-
-  if (matchingIssues.length === 0) {
-    return null;
-  }
-
-  if (matchingIssues.length > 1) {
-    const duplicateNumbers = matchingIssues
-      .map((issue) => `#${issue.number}`)
-      .join(", ");
-
-    throw new Error(
-      `Multiple GitHub Issues contain suggestion ${suggestionId}: ${duplicateNumbers}.`,
-    );
-  }
-
-  return extractExistingIssueInformation(
-    matchingIssues[0],
-    safeRepository,
-  );
+  return findExistingGitHubIssueBySuggestionId({
+    suggestionId,
+    repository: safeRepository,
+    repositoryItems,
+  });
 }
 
-/* ========================================================================== */
-/* ISSUE CREATION                                                             */
-/* ========================================================================== */
-
-function extractIssueInformation(commandOutput, repository) {
+function extractCreatedIssueInformation(commandOutput, repository) {
   const outputLines = String(commandOutput || "")
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -340,7 +259,9 @@ function extractIssueInformation(commandOutput, repository) {
 
   const issueUrl = [...outputLines]
     .reverse()
-    .find((line) => /^https:\/\/github\.com\/.+\/issues\/\d+\/?$/i.test(line));
+    .find((line) =>
+      /^https:\/\/github\.com\/.+\/issues\/\d+\/?$/i.test(line),
+    );
 
   if (!issueUrl) {
     throw new Error(
@@ -421,7 +342,7 @@ export async function createDevelopmentGitHubIssue(
       ...labelArguments,
     ]);
 
-    return extractIssueInformation(
+    return extractCreatedIssueInformation(
       creationResult.standardOutput,
       safeRepository,
     );

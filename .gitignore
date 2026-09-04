@@ -11,3 +11,10 @@ node_modules/
 
 # Local content suggestion storage
 .local-data/
+
+# Cloudflare local development state
+.wrangler/
+
+# Local Worker secrets
+.dev.vars*
+.env*
