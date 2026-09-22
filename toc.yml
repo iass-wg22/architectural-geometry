@@ -28,7 +28,7 @@ project:
           - pattern: 'form/transformations/*/home.md'
             sort: ascending
 
-   - title: Form-Structure
+   - title: From equilibrium to form
      file: form_structure/home_portal.md
      children:
 
