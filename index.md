@@ -32,22 +32,22 @@ More complex interactions are of course possible, but they are likely less gener
 
 ::::{card} 
 :header: **Describing the shape or how to analyse the form parameters**
-This section introduces the various notions of geometry which are necessary for a designer to describe and analyse a *form*.
+[This section](.\form\home_portal.md) introduces the various notions of geometry which are necessary for a designer to describe and analyse a *form*.
 
-:::{dropdown} Geometry of Curves
-Elementary notions of curves geometry
+:::{dropdown} [Geometry of Curves](.\form\curves\home.md)
+Elementary notions of curves geometry: Local frame (Frenet, Bishop), osculating plane, curvature and torsion, paralel transport, etc.
 :::
 
-:::{dropdown} Smooth Surfaces
-Elementary notions of smooth differential geometry
+:::{dropdown} [Geometry of Smooth Surfaces](.\form\smooth_surfaces\home.md)
+Elementary notions of smooth differential geometry: parametrisation, metric change and first fundamental form, curvature and second fundamental form, Gauss Map, geometry of curves on surface (Darboux frame, geodesic curves, principal curvarture, asymptotic curves), curve networks (conjugate), developability, singularity, etc.
 :::
 
-:::{dropdown}  Polyedral Surfaces
-Elementary notions of discrete differential geometry
+:::{dropdown} [Geometry of Polyedral Surfaces](.\form\polyedral_surfaces\home.md)  
+Elementary notions of discrete differential geometry: curvature of a polyedral surface, Gauss Map, elementary mesh topology/Morphologies (Tri, Quad, Hex and singularities), PQ Mesh, circular and conical meshes, PHex-Mesh, geodesic, etc. 
 :::
 
-:::{dropdown} Transformations of Surfaces
-Elementary notions of surface transformations and invariant properties.
+:::{dropdown} [Transformations of Surfaces](.\form\transformations\home.md )
+Transformations play a central role in the understanding and structuration of geometry. A few meaningfull transformations for architecture are recalled here: isometry, Möbius transform (or inversion), Combescure transform (or parallelism), Affine transformation, etc.
 :::
 
 ::::
