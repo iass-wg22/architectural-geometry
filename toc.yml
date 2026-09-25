@@ -3,7 +3,7 @@ project:
   toc:
    - file: index.md
 
-   - title: Form
+   - title: Geometry bases
      file: form/home_portal.md
      children:
 
@@ -12,12 +12,12 @@ project:
          children:
           - pattern: 'form/curves/*/home.md'
             sort: ascending
-       - title: Smooth Surfaces
+       - title: Geometry ofSmooth Surfaces
          file: form/smooth_surfaces/home.md
          children:
           - pattern: 'form/smooth_surfaces/*/home.md'
             sort: ascending
-       - title: Polyhedral Surfaces
+       - title: Geometry of Polyhedral Surfaces
          file: form/polyedral_surfaces/home.md
          children:
           - pattern: 'form/polyedral_surfaces/*/home.md'
@@ -28,7 +28,7 @@ project:
           - pattern: 'form/transformations/*/home.md'
             sort: ascending
 
-   - title: From equilibrium to form
+   - title: From shape generation methods
      file: form_structure/home_portal.md
      children:
 
@@ -65,7 +65,7 @@ project:
             - pattern: 'form_structure/compatible_transformations/*/home.md'
               sort: ascending
 
-   - title: Form-Technology 
+   - title: From building technology 
      file: form_technology/home_portal.md
      children:
 
@@ -90,7 +90,7 @@ project:
           - pattern: 'form_technology/integration_methods/*/home.md'
             sort: ascending
 
-   - title: Form-Force 
+   - title: From mechanical principles
      file: form_force/home_portal.md
      children:
 
@@ -120,7 +120,7 @@ project:
           - pattern: 'form_force/form_finding/*/home.md'
             sort: ascending
 
-   - title: Built Examples
+   - title: Remarquable Built Examples
      file: built_examples/home_portal.md
      children:
 

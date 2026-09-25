@@ -1,10 +1,10 @@
 ---
-title: Something Else than Folder A
+title: Geometry of polyedral surfaces
 ---
 
 
 <!-- Title of the page -->
 
-Some content
+Elementary notions of discrete differential geometry: curvature of a polyedral surface, Gauss Map, elementary mesh topology/Morphologies (Tri, Quad, Hex and singularities), PQ Mesh, circular and conical meshes, PHex-Mesh, geodesic, etc. 
 
 ## First title
