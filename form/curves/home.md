@@ -1,10 +1,10 @@
 ---
-title: Something Else than Folder A
+title: Geometry of curves in Space
 ---
 
 
 <!-- Title of the page -->
 
-Some content
+Elementary notions of curves geometry: Local frame (Frenet, Bishop), osculating plane, curvature and torsion, paralel transport, etc.
 
 ## First title
