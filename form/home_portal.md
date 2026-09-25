@@ -5,7 +5,7 @@ title: Describing the shape or how to analyse the form parameters
 
 <!-- Title of the page -->
 
-This section introduces the various notions of geometry which are necessary for a designer to describe and analyse a *form*.
+This section provides a short and targeted introduction to the various notions of geometry which are necessary for a designer to describe and analyse a *form*.
 
 :::{dropdown} Geometry of Curves
 :open:
